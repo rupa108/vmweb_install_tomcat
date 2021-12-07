@@ -20,8 +20,8 @@ $(basename $0), Install the given WAR file in ${APP_DIR}
   Usage:
   $(basename $0) [input WAR file]
 
-  The utility will also stop/start tomacat and take care of saving the
-  contetnt of the following files and put the back in place after install:
+  This utility will also stop/start tomcat and take care of saving the
+  contents of the following files and put them back in place after install:
 
 _
 	printf "  %s\n"  "${FILES4SAVE[@]}"
@@ -39,6 +39,26 @@ if [[ $1 == /* ]]; then
 else
 	T_NAME="${PWD}/${1}"
 	FULL_NAME="$(cd $(dirname ${T_NAME}); pwd)/$(basename ${T_NAME})"
+fi
+
+########################################################################
+# Check Tomcat service name
+service_exists() {
+    local n=$1
+    if [[ $(systemctl list-units --all -t service --full --no-legend "$n.service" | sed 's/^\s*//g' | cut -f1 -d' ') == $n.service ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+if service_exists tomcat9; then
+    SERVICE_NAME=tomcat9
+elif service_exists tomcat; then
+    SERVICE_NAME=tomcat
+else
+    echo "Can not figure out how to start and stop tomcat. Exiting!"
+    exit 1
 fi
 
 ########################################################################
@@ -87,11 +107,11 @@ done
 
 ########################################################################
 # stop tomcat
-if systemctl is-active --quiet tomcat9.service; then
+if systemctl is-active --quiet ${SERVICE_NAME}.service; then
 	echo
 	echo "Tomcat is running."
 	echo "Stopping tomcat ..." 
-	systemctl stop tomcat9.service
+	systemctl stop ${SERVICE_NAME}.service
 	echo
 fi
 
@@ -122,7 +142,7 @@ done
 ########################################################################
 # start tomcat
 echo "Starting tomcat"
-systemctl start tomcat9.service || echo "Starting tomcat failed!!"
+systemctl start ${SERVICE_NAME}.service || echo "Starting tomcat failed!!"
 ########################################################################
 # clean up
 echo "Cleaning up ..."
